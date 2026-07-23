@@ -13,6 +13,7 @@
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"onCreateCommand": "cp -n .env.example .env || true",
 	"postCreateCommand": "python -m pip install --upgrade pip && pip install -r requirements.txt",
+	"postStartCommand": "sudo mkdir -p /run/sshd && sudo ssh-keygen -A && (pgrep -x sshd >/dev/null || sudo /usr/sbin/sshd)",
 	"customizations": {
 		"vscode": {
 			"settings": {
