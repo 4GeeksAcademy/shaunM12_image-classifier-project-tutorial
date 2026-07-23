@@ -1,3 +1,50 @@
-__pycache__
+__pycache__/
+*.py[cod]
 .env
 .learn
+
+# Large / generated data (keep folder structure via .gitkeep)
+data/raw/asirra/train/*
+!data/raw/asirra/train/.gitkeep
+data/raw/asirra/test/*
+!data/raw/asirra/test/.gitkeep
+data/processed/train/**/*
+!data/processed/train/**/.gitkeep
+data/processed/val/**/*
+!data/processed/val/**/.gitkeep
+data/processed/test/**/*
+!data/processed/test/**/.gitkeep
+data/interim/manifest.csv
+data/interim/splits.json
+data/interim/dedup_report.csv
+
+# Trained models (large binaries)
+saved_models/*
+!saved_models/.gitkeep
+!saved_models/README.md
+*.keras
+
+# Generated reports & charts (regenerate with pipeline)
+reports/eda/*
+!reports/eda/.gitkeep
+reports/metrics/*
+!reports/metrics/.gitkeep
+reports/steps/*
+!reports/steps/.gitkeep
+reports/PROJECT_SUMMARY.md
+
+# Keep test summaries in git for review / CI visibility
+reports/tests/*
+!reports/tests/.gitkeep
+!reports/tests/test_results.md
+!reports/tests/test_results.json
+
+# Keep report index and sample submission template
+!reports/README.md
+submissions/asirra_predictions.csv
+!submissions/sample_submission.csv
+!submissions/README.md
+
+# Local notebooks / logs
+.ipynb_checkpoints/
+*.log

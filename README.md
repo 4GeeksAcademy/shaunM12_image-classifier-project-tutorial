@@ -1,112 +1,141 @@
-# Data Science Project Boilerplate
+# Asirra Cats vs Dogs — Leak-Free CNN Pipeline
 
-This boilerplate is designed to kickstart data science projects by providing a basic setup for database connections, data processing, and machine learning model development. It includes a structured folder organization for your datasets and a set of pre-defined Python packages necessary for most data science tasks.
+Keras transfer-learning project (VGG16) for the [Asirra / Dogs vs Cats](https://www.kaggle.com/c/dogs-vs-cats) dataset. The pipeline enforces a **leak-free** train / validation / test protocol and writes **per-step reports** for review.
 
-## Structure
+See [`specs.md`](specs.md) for the full data policy and tutorial requirements.
 
-The project is organized as follows:
+## Assignment alignment (ANN vs CNN)
 
-- **`src/app.py`** → Main Python script where your project will run.
-- **`src/explore.ipynb`** → Notebook for exploration and testing. Once exploration is complete, migrate the clean code to `app.py`.
-- **`src/utils.py`** → Auxiliary functions, such as database connection.
-- **`requirements.txt`** → List of required Python packages.
-- **`models/`** → Will contain your SQLAlchemy model classes.
-- **`data/`** → Stores datasets at different stages:
-  - **`data/raw/`** → Raw data.
-  - **`data/interim/`** → Temporarily transformed data.
-  - **`data/processed/`** → Data ready for analysis.
+The assignment refers to an ANN in the general sense; for image classification we implemented a **convolutional neural network** (VGG-style / VGG16 transfer), which is the appropriate architecture for photo-based cat vs dog classification. Step 3 of the tutorial specifies `Conv2D` / `MaxPool2D` layers (a CNN), not a dense-only network. Use `--from-scratch` to train the literal VGG-style Sequential stack from the tutorial.
 
+## Quick status
 
-## ⚡ Initial Setup in Codespaces (Recommended)
+After running the pipeline, open **[`reports/PROJECT_SUMMARY.md`](reports/PROJECT_SUMMARY.md)** for a one-page view: stage status, metrics, leakage tests, and key charts.
 
-No manual setup is required, as **Codespaces is automatically configured** with the predefined files created by the academy for you. Just follow these steps:
+Detailed step narratives live in [`reports/steps/`](reports/steps/).
 
-1. **Wait for the environment to configure automatically**.
-   - All necessary packages and the database will install themselves.
-   - The automatically created `username` and `db_name` are in the **`.env`** file at the root of the project.
-2. **Once Codespaces is ready, you can start working immediately**.
+## Data layout
 
+```
+data/raw/asirra/train/     ← ~25k labeled images (immutable; do not train from here after split)
+data/raw/asirra/test/      ← ~12.5k unlabeled Kaggle images (optional inference only)
+data/interim/              ← manifest.csv, splits.json, dedup_report.csv
+data/processed/train/      ← 70% stratified copy (generators train from here)
+data/processed/val/        ← 15% — EarlyStopping, ModelCheckpoint, tuning
+data/processed/test/       ← 15% — one-time final evaluation only
+saved_models/              ← baseline, best checkpoint, final export (.keras)
+reports/                   ← auto-generated step reports, charts, tests
+submissions/               ← optional Kaggle prediction CSV
+```
 
-## 💻 Local Setup (Only if you can't use Codespaces)
+## Split & leakage rules
 
-**Prerequisites**
+| Split | Share | Use |
+|-------|-------|-----|
+| Train | 70% | `model.fit()` only |
+| Val | 15% | Callbacks, charts, reload sanity check |
+| Test | 15% | **One** gated evaluation (`ALLOW_TEST_EVAL=true`) |
 
-Make sure you have Python 3.11+ installed on your machine. You will also need pip to install the Python packages.
+- Stratified by class, seed **42**, deduplicated by content hash.
+- **Never** train from `data/raw/` after the split script runs.
+- **Never** use Kaggle unlabeled `test/` for accuracy or callbacks.
+- `ModelCheckpoint` and `EarlyStopping` monitor **`val_accuracy`** only.
 
-**Installation**
+## Pipeline commands
 
-Clone the project repository to your local machine.
+Run from the project root:
 
-Navigate to the project directory and install the required Python packages:
+```bash
+# Step 1 — manifest + stratified split
+python src/app.py --stage manifest
+python src/app.py --stage split
+
+# Step 2 — EDA
+python src/app.py --stage eda
+
+# Step 3 — baseline VGG16 transfer learning (default 1 epoch on CPU)
+python src/app.py --stage train
+
+# Charts only (no retraining)
+python src/app.py --stage visuals
+
+# Step 4 — optimize with EarlyStopping + ModelCheckpoint
+python src/app.py --stage optimize --epochs 6 --patience 2
+
+# Step 4 — one-time held-out test (locked until explicit opt-in)
+ALLOW_TEST_EVAL=true python src/app.py --stage evaluate
+
+# Step 5 — export final model + val reload check
+python src/app.py --stage save
+
+# Refresh reports, charts, leakage tests, PROJECT_SUMMARY.md
+python src/app.py --stage report
+```
+
+Shortcut for data prep only:
+
+```bash
+python src/app.py --stage all   # manifest + split
+```
+
+## Setup
+
+**Codespaces (recommended):** environment configures automatically. Install deps if needed:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Create a database (if necessary)**
+**Local:** Python 3.11+, then `pip install -r requirements.txt`. Download Asirra labeled train images into `data/raw/asirra/train/` (see [`data/raw/asirra/README.md`](data/raw/asirra/README.md)).
 
-Create a new database within the Postgres engine by customizing and executing the following command:
+## Key outputs
 
-```bash
-$ psql -U postgres -c "DO \$\$ BEGIN 
-    CREATE USER my_user WITH PASSWORD 'my_password'; 
-    CREATE DATABASE my_database OWNER my_user; 
-END \$\$;"
-```
-Connect to the Postgres engine to use your database, manipulate tables, and data:
+| Artifact | Path |
+|----------|------|
+| Baseline model | `saved_models/baseline_model.keras` |
+| Best checkpoint (Step 4) | `saved_models/best_model.keras` |
+| Final export (Step 5) | `saved_models/asirra_cats_dogs_final.keras` |
+| Test metrics (once) | `reports/metrics/final_test.json` |
+| EarlyStopping chart | `reports/metrics/early_stopping_summary.png` |
+| Leakage tests | `reports/tests/test_results.md` |
 
-```bash
-$ psql -U my_user -d my_database
-```
+## What is gitignored
 
-Once inside PSQL, you can create tables, run queries, insert, update, or delete data, and much more!
+Large and generated artifacts stay local (see [`.gitignore`](.gitignore)):
 
-**Environment Variables**
+- Raw and processed images
+- Interim manifest/splits CSV/JSON
+- Trained `.keras` models
+- Generated reports, charts, and `PROJECT_SUMMARY.md`
 
-Create a .env file in the root directory of the project to store your environment variables, such as your database connection string:
+Tracked in git: **source code**, `specs.md`, `submissions/sample_submission.csv`, and leakage **test result summaries** under `reports/tests/`.
 
-```makefile
-DATABASE_URL="postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DB_NAME>"
+## Optional: Kaggle submission
 
-#example
-DATABASE_URL="postgresql://my_user:my_password@localhost:5432/my_database"
-```
-
-## Running the Application
-
-To run the application, execute the app.py script from the root directory of the project:
+Download unlabeled Kaggle test images to `data/raw/asirra/test/`, then run predict (when implemented):
 
 ```bash
-python src/app.py
+python src/app.py --stage predict
 ```
 
-## Adding Models
+Output: `submissions/asirra_predictions.csv` (inference only — no accuracy on that folder).
 
-To add SQLAlchemy model classes, create new Python script files within the models/ directory. These classes should be defined according to your database schema.
+## Tests
 
-Example model definition (`models/example_model.py`):
-
-```py
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-Base = declarative_base()
-
-class ExampleModel(Base):
-    __tablename__ = 'example_table'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
+```bash
+python -m unittest tests.test_leakage -v
 ```
 
-## Working with Data
+## Project structure
 
-You can place your raw datasets in the data/raw directory, intermediate datasets in data/interim, and processed datasets ready for analysis in data/processed.
-
-To process data, you can modify the app.py script to include your data processing steps, using pandas for data manipulation and analysis.
-
-## Contributors
-
-This template was built as part of the [Data Science and Machine Learning Bootcamp](https://4geeksacademy.com/us/coding-bootcamps/datascience-machine-learning) by 4Geeks Academy by [Alejandro Sanchez](https://twitter.com/alesanchezr) and many other contributors. Learn more about [4Geeks Academy BootCamp programs](https://4geeksacademy.com/us/programs) here.
-
-Other templates and resources like this can be found on the school's GitHub page.
+```
+src/
+  app.py              # CLI entry point
+  config.py           # paths, hyperparameters, leakage test descriptions
+  data/               # manifest, split, EDA, generators
+  models/             # VGG build, train, evaluate, save
+  visualizations.py   # EDA + training + validation charts
+  reporting.py        # step reports + PROJECT_SUMMARY.md
+tests/
+  test_leakage.py     # split / path / evaluate-gate checks
+```

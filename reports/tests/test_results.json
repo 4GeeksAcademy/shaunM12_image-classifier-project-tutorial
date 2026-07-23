@@ -1,0 +1,76 @@
+{
+  "timestamp_utc": "2026-07-23T23:37:06Z",
+  "command": "python -m unittest tests.test_leakage -v",
+  "totals": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "total": 8
+  },
+  "tests": [
+    {
+      "name": "test_content_hash_not_shared_across_splits",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 3.1988,
+      "verifies": "Duplicate files stay in a single split",
+      "why_it_matters": "Prevents duplicate-image leakage across splits"
+    },
+    {
+      "name": "test_evaluate_gate_blocks_test_by_default",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.0023,
+      "verifies": "Test evaluation is blocked unless ALLOW_TEST_EVAL=true",
+      "why_it_matters": "Prevents accidental repeated test peeking"
+    },
+    {
+      "name": "test_kaggle_test_dir_not_in_manifest",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.1328,
+      "verifies": "Unlabeled Kaggle test images are excluded from manifest",
+      "why_it_matters": "Keeps unlabeled data out of labeled split logic"
+    },
+    {
+      "name": "test_manifest_exists_after_split",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.1181,
+      "verifies": "Manifest exists with valid split column",
+      "why_it_matters": "Ensures pipeline metadata is complete before training"
+    },
+    {
+      "name": "test_processed_paths_under_processed_dir",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.0,
+      "verifies": "Train/val/test paths live under data/processed/",
+      "why_it_matters": "Prevents accidental training from raw data paths"
+    },
+    {
+      "name": "test_split_disjointness",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.1327,
+      "verifies": "No image_id appears in more than one split",
+      "why_it_matters": "Prevents the same image from being in train and test"
+    },
+    {
+      "name": "test_splits_json_matches_manifest",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.1177,
+      "verifies": "splits.json counts match manifest.csv",
+      "why_it_matters": "Ensures reporting and materialized splits are consistent"
+    },
+    {
+      "name": "test_stratification_within_tolerance",
+      "status": "PASS",
+      "message": "",
+      "duration_seconds": 0.1315,
+      "verifies": "Cat/dog ratio is similar across train, val, and test",
+      "why_it_matters": "Prevents biased splits that distort evaluation"
+    }
+  ]
+}
