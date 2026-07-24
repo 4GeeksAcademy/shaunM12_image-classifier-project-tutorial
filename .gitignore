@@ -31,7 +31,7 @@ reports/metrics/*
 !reports/metrics/.gitkeep
 reports/steps/*
 !reports/steps/.gitkeep
-reports/PROJECT_SUMMARY.md
+
 
 # Keep test summaries in git for review / CI visibility
 reports/tests/*
